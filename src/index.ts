@@ -28,6 +28,7 @@ async function connectToDatabase() {
 connectToDatabase();
 
 //Middleware
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cors({ origin: `${process.env.URL_FRONT}`, credentials: true }));
 app.use(
@@ -35,6 +36,11 @@ app.use(
     secret: "secretcode",
     resave: true,
     saveUninitialized: true,
+    cookie: {
+      sameSite: true,
+      secure: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
   })
 );
 app.use(passport.initialize());
