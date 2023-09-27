@@ -4,8 +4,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import session from "express-session";
 import passport from "passport";
+import { IMongoDBUser } from "./types";
+import User from "./User";
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const TwitterStrategy = require("passport-twitter").Strategy;
+const GitHubStrategy = require("passport-github").Strategy;
 
 dotenv.config();
 
@@ -37,14 +40,25 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser((user: any, done: any) => {
-  return done(null, user);
+passport.serializeUser((user: IMongoDBUser, done: any) => {
+  return done(null, user._id);
 });
 
-passport.deserializeUser((user: any, done: any) => {
-  return done(null, user);
+passport.deserializeUser((id: String, done: any) => {
+  User.findById(id)
+    .exec()
+    .then((doc: IMongoDBUser | any) => {
+      if (!doc) {
+        return done(null, false); // User not found
+      }
+      return done(null, doc);
+    })
+    .catch((err: Error) => {
+      return done(err);
+    });
 });
 
+// Strategies
 passport.use(
   new GoogleStrategy(
     {
@@ -52,9 +66,27 @@ passport.use(
       clientSecret: `${process.env.GOOGLE_CLIENT_SECRET}`,
       callbackURL: "/auth/google/callback",
     },
-    function (accessToken: any, refreshToken: any, profile: any, cb: any) {
-      // console.log(profile);
-      cb(null, profile);
+    async function (_: any, __: any, profile: any, cb: any) {
+      try {
+        let user: any = await User.findOne({ googleId: profile.id });
+
+        if (!user) {
+          const newUserData: IMongoDBUser | any = {
+            googleId: profile.id,
+            username: profile.name.givenName,
+          };
+
+          const newUser = new User(newUserData);
+
+          await newUser.save();
+
+          user = newUserData; // Cast newUserData to IMongoDBUser
+        }
+
+        cb(null, user);
+      } catch (err) {
+        cb(err, null);
+      }
     }
   )
 );
@@ -62,13 +94,63 @@ passport.use(
 passport.use(
   new TwitterStrategy(
     {
-      consumerKey: `${process.env.TWITTER_CLIENT_ID}`,
-      consumerSecret: `${process.env.TWITTER_CLIENT_SECRET}`,
+      consumerKey: `${process.env.TWITTER_APIKEY_ID}`,
+      consumerSecret: `${process.env.TWITTER_APIKEY_SECRET}`,
       callbackURL: "/auth/twitter/callback",
     },
-    function (accessToken: any, refreshToken: any, profile: any, cb: any) {
-      // console.log(profile);
-      cb(null, profile);
+    async function (_: any, __: any, profile: any, cb: any) {
+      try {
+        let user: any = await User.findOne({ twitterId: profile.id });
+
+        if (!user) {
+          const newUserData: IMongoDBUser | any = {
+            twitterId: profile.id,
+            username: profile.username,
+          };
+
+          const newUser = new User(newUserData);
+
+          await newUser.save();
+
+          user = newUserData; // Cast newUserData to IMongoDBUser
+        }
+
+        cb(null, user);
+      } catch (err) {
+        cb(err, null);
+      }
+    }
+  )
+);
+
+passport.use(
+  new GitHubStrategy(
+    {
+      clientID: `${process.env.GITHUB_CLIENT_ID}`,
+      clientSecret: `${process.env.GITHUB_CLIENT_SECRET}`,
+      callbackURL: "/auth/github/callback",
+    },
+    async function (_: any, __: any, profile: any, cb: any) {
+      try {
+        let user: any = await User.findOne({ githubId: profile.id });
+
+        if (!user) {
+          const newUserData: IMongoDBUser | any = {
+            githubId: profile.id,
+            username: profile.username,
+          };
+
+          const newUser = new User(newUserData);
+
+          await newUser.save();
+
+          user = newUserData; // Cast newUserData to IMongoDBUser
+        }
+
+        cb(null, user);
+      } catch (err) {
+        cb(err, null);
+      }
     }
   )
 );
@@ -81,7 +163,7 @@ app.get(
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", {
-    failureRedirect: `${process.env.URL_FRONT}`,
+    failureRedirect: `${process.env.URL_FRONT}/login`,
     session: true,
   }),
   function (req, res) {
@@ -93,7 +175,24 @@ app.get("/auth/twitter", passport.authenticate("twitter"));
 
 app.get(
   "/auth/twitter/callback",
-  passport.authenticate("twitter", { failureRedirect: "/login" }),
+  passport.authenticate("twitter", {
+    failureRedirect: `${process.env.URL_FRONT}/login`,
+    session: true,
+  }),
+  function (req, res) {
+    // Successful authentication, redirect home.
+    res.redirect(`${process.env.URL_FRONT}`);
+  }
+);
+
+app.get("/auth/github", passport.authenticate("github"));
+
+app.get(
+  "/auth/github/callback",
+  passport.authenticate("github", {
+    failureRedirect: `${process.env.URL_FRONT}/login`,
+    session: true,
+  }),
   function (req, res) {
     // Successful authentication, redirect home.
     res.redirect(`${process.env.URL_FRONT}`);
@@ -106,6 +205,19 @@ app.get("/", (req, res) => {
 
 app.get("/getuser", (req, res) => {
   res.send(req.user);
+});
+
+app.get("/auth/logout", (req, res) => {
+  if (req.user) {
+    req.logout((err: any) => {
+      if (err) {
+        // Handle any potential errors
+        res.status(500).send("Logout error");
+      } else {
+        res.send("done");
+      }
+    });
+  }
 });
 
 app.listen(4000, () => {
