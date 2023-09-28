@@ -40,6 +40,7 @@ app.use(
       // You can configure the session cookie options here
       // SameSite can be 'lax' or 'strict' depending on your requirements
       sameSite: "lax",
+      secure: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // One week (adjust as needed)
       httpOnly: true, // Set to true to prevent client-side JavaScript access
     },
