@@ -37,9 +37,10 @@ app.use(
     resave: true,
     saveUninitialized: true,
     cookie: {
-      sameSite: "none", // Allow cross-site requests (e.g., for OAuth flows)
-      // secure: true, // Ensure cookies are sent only over HTTPS
+      sameSite: "lax", // Allow cross-site requests (e.g., for OAuth flows)
+      secure: true, // Ensure cookies are sent only over HTTPS
       maxAge: 1000 * 60 * 60 * 24 * 7, // One week (adjust as needed)
+      httpOnly: true, // Set to true to prevent client-side JavaScript access
     },
   })
 );
