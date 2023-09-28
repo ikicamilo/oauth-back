@@ -34,12 +34,14 @@ app.use(cors({ origin: `${process.env.URL_FRONT}`, credentials: true }));
 app.use(
   session({
     secret: "secretcode",
-    resave: true,
+    resave: false,
     saveUninitialized: true,
     cookie: {
-      sameSite: "none", // Allow cross-site requests (e.g., for OAuth flows)
-      secure: true, // Ensure cookies are sent only over HTTPS
+      // You can configure the session cookie options here
+      // SameSite can be 'lax' or 'strict' depending on your requirements
+      sameSite: "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7, // One week (adjust as needed)
+      httpOnly: true, // Set to true to prevent client-side JavaScript access
     },
   })
 );
