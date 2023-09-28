@@ -36,14 +36,24 @@ app.use(
     secret: "secretcode",
     resave: false,
     saveUninitialized: true,
+    // cookie: {
+    //   sameSite: true,
+    //   secure: false,
+    //   maxAge: 1000 * 60 * 60 * 24 * 7,
+    // },
     cookie: {
-      // You can configure the session cookie options here
-      // SameSite can be 'lax' or 'strict' depending on your requirements
-      sameSite: "lax",
-      secure: true,
+      sameSite: "none", // Allow cross-site requests (e.g., for OAuth flows)
+      secure: true, // Ensure cookies are sent only over HTTPS
       maxAge: 1000 * 60 * 60 * 24 * 7, // One week (adjust as needed)
-      httpOnly: true, // Set to true to prevent client-side JavaScript access
     },
+    // cookie: {
+    //   // You can configure the session cookie options here
+    //   // SameSite can be 'lax' or 'strict' depending on your requirements
+    //   sameSite: "lax",
+    //   secure: true,
+    //   maxAge: 1000 * 60 * 60 * 24 * 7, // One week (adjust as needed)
+    //   httpOnly: true, // Set to true to prevent client-side JavaScript access
+    // },
   })
 );
 app.use(passport.initialize());
